@@ -82,8 +82,11 @@ const Post = () => [
           </p>
 
           <a href="#">
-            <img className="img-fluid" src="img/post-sample-image.jpg" alt="" />
-            >
+            <img
+              className="img-fluid"
+              src="../img/post-sample-image.jpg"
+              alt=""
+            />
           </a>
           <span className="caption text-muted">
             To go places and do things that have never been done before – that’s
