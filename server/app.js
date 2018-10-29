@@ -1,9 +1,11 @@
 const express = require("express");
+const cors = require("cors");
 const graphqlHTTP = require("express-graphql");
 const schema = require("./schema");
 const app = express();
 const mongoose = require("mongoose");
 
+app.use(cors());
 const PORT = process.env.PORT || 4000;
 const options = {
   useNewUrlParser: true,

@@ -8,7 +8,8 @@ const {
   GraphQLID,
   GraphQLString,
   GraphQLSchema,
-  GraphQLList
+  GraphQLList,
+  GraphQLNonNull
 } = graphql;
 
 const PostType = new GraphQLObjectType({
@@ -48,10 +49,13 @@ const RootQuery = new GraphQLObjectType({
         return Post.findById(args.id);
       }
     },
+    posts: {
+      type: GraphQLList(PostType),
+      resolve: async () => await Post.find()
+    },
     categories: {
       type: GraphQLList(CategoryType),
-      args: { categories: { type: GraphQLList(GraphQLString) } },
-      resolve: async (parent, args) => {
+      resolve: async () => {
         return await Category.find();
       }
     }
@@ -64,8 +68,8 @@ const Mutation = new GraphQLObjectType({
     addCategory: {
       type: CategoryType,
       args: {
-        name: { type: GraphQLString },
-        description: { type: GraphQLString }
+        name: { type: new GraphQLNonNull(GraphQLString) },
+        description: { type: new GraphQLNonNull(GraphQLString) }
       },
       resolve: (parent, args) => {
         const { name, description } = args;
@@ -80,9 +84,9 @@ const Mutation = new GraphQLObjectType({
     addPost: {
       type: PostType,
       args: {
-        title: { type: GraphQLString },
-        body: { type: GraphQLString },
-        categories: { type: GraphQLList(GraphQLString) }
+        title: { type: GraphQLNonNull(GraphQLString) },
+        body: { type: GraphQLNonNull(GraphQLString) },
+        categories: { type: GraphQLNonNull(GraphQLList(GraphQLString)) }
       },
       resolve: (parent, args) => {
         const { title, categories, body } = args;
