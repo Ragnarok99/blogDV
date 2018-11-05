@@ -2,6 +2,10 @@ const graphql = require("graphql");
 const _ = require("lodash");
 const Post = require("../models/post");
 const Category = require("../models/category");
+const User = require("../models/user");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const dotenv = require("dotenv");
 
 const {
   GraphQLObjectType,
@@ -30,6 +34,25 @@ const PostType = new GraphQLObjectType({
   })
 });
 
+const UserType = new GraphQLObjectType({
+  name: "User",
+  fields: () => ({
+    id: { type: GraphQLID },
+    name: { type: GraphQLString },
+    lastName: { type: GraphQLString },
+    username: { type: GraphQLString },
+    email: { type: GraphQLString }
+  })
+});
+
+const loginType = new GraphQLObjectType({
+  name: "login",
+  fields: () => ({
+    message: { type: GraphQLString },
+    token: { type: GraphQLString }
+  })
+});
+
 const CategoryType = new GraphQLObjectType({
   name: "Category",
   fields: () => ({
@@ -55,7 +78,8 @@ const RootQuery = new GraphQLObjectType({
     },
     categories: {
       type: GraphQLList(CategoryType),
-      resolve: async () => {
+      resolve: async (parent, args, { user }) => {
+        console.log(user);
         return await Category.find();
       }
     }
@@ -96,6 +120,59 @@ const Mutation = new GraphQLObjectType({
           categories
         });
         return post.save();
+      }
+    },
+    createUser: {
+      type: UserType,
+      args: {
+        name: { type: GraphQLNonNull(GraphQLString) },
+        lastName: { type: GraphQLString },
+        email: { type: GraphQLNonNull(GraphQLString) },
+        username: { type: GraphQLNonNull(GraphQLString) },
+        password: { type: GraphQLNonNull(GraphQLString) }
+      },
+      resolve: async (parent, args) => {
+        const { name, lastName, email, username, password } = args;
+        const dbPassword = await bcrypt.hash(password, 12);
+        const user = new User({
+          name,
+          lastName,
+          email,
+          username,
+          password: dbPassword
+        });
+
+        return user.save();
+      }
+    },
+    login: {
+      type: loginType,
+      args: {
+        username: { type: GraphQLNonNull(GraphQLString) },
+        password: { type: GraphQLNonNull(GraphQLString) }
+      },
+      resolve: async (parent, args) => {
+        const { username, password } = args;
+
+        const user = await User.findOne({ username });
+        if (!user) {
+          return { message: "auth failed", token: null };
+        }
+
+        const isValid = await bcrypt.compare(password, user.password);
+
+        if (!isValid) return { message: "auth failed", token: null };
+
+        const {
+          parsed: { SECRET_KEY_TOKEN }
+        } = dotenv.config();
+
+        const token = jwt.sign(
+          _.pick(user, ["_id", "username", "email"]),
+          SECRET_KEY_TOKEN,
+          { expiresIn: "1d" }
+        );
+        return { message: "auth successfuly", token };
       }
     }
   }

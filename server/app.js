@@ -4,8 +4,9 @@ const graphqlHTTP = require("express-graphql");
 const schema = require("./schema");
 const app = express();
 const mongoose = require("mongoose");
+const jwt = require("jsonwebtoken");
+const dotenv = require("dotenv");
 
-app.use(cors());
 const PORT = process.env.PORT || 4000;
 const options = {
   useNewUrlParser: true,
@@ -30,12 +31,37 @@ mongoose
   .then(() => {
     console.log("connected to mongo database");
   });
+
+const addUser = async (req, res, next) => {
+  const token = req.headers["authorization"];
+
+  try {
+    const {
+      parsed: { SECRET_KEY_TOKEN }
+    } = dotenv.config();
+
+    const user = await jwt.verify(token, SECRET_KEY_TOKEN);
+
+    req.user = user;
+  } catch (err) {
+    console.log(err);
+  }
+
+  next();
+};
+
+app.use(addUser);
+app.use(cors("*"));
+
 app.use(
   "/graphql",
-  graphqlHTTP({
+  graphqlHTTP(req => ({
     graphiql: true,
-    schema
-  })
+    schema,
+    context: {
+      user: req.user
+    }
+  }))
 );
 app.listen(PORT, () => {
   console.log(`server running on: ${PORT}`);
